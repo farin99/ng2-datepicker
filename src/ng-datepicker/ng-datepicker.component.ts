@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, OnChanges, SimpleChanges, ElementRef, HostListener, forwardRef } from '@angular/core';
+import { Component, OnInit, Input, OnChanges, SimpleChanges, ElementRef, HostListener, forwardRef, Optional } from '@angular/core';
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import {
   startOfMonth,
@@ -20,6 +20,8 @@ import {
   setDay
 } from 'date-fns';
 import { ISlimScrollOptions } from 'ngx-slimscroll';
+import { PostHogService } from '../services/posthog.service';
+import { PostHogLogService } from '../services/posthog-log.service';
 
 export interface DatepickerOptions {
   minYear?: number; // default: current year - 30
@@ -110,7 +112,11 @@ export class NgDatepickerComponent implements ControlValueAccessor, OnInit, OnCh
     this.onChangeCallback(this.innerValue);
   }
 
-  constructor(private elementRef: ElementRef) {
+  constructor(
+    private elementRef: ElementRef,
+    @Optional() private posthogService: PostHogService,
+    @Optional() private posthogLogService: PostHogLogService
+  ) {
     this.scrollOptions = {
       barBackground: '#DFE3E9',
       gridBackground: '#FFFFFF',
@@ -158,11 +164,31 @@ export class NgDatepickerComponent implements ControlValueAccessor, OnInit, OnCh
   nextMonth(): void {
     this.date = addMonths(this.date, 1);
     this.init();
+    if (this.posthogService) {
+      this.posthogService.posthog.capture('datepicker_month_navigated', {
+        direction: 'next'
+      });
+    }
+    if (this.posthogLogService) {
+      this.posthogLogService.info('datepicker month navigated', {
+        direction: 'next'
+      });
+    }
   }
 
   prevMonth(): void {
     this.date = subMonths(this.date, 1);
     this.init();
+    if (this.posthogService) {
+      this.posthogService.posthog.capture('datepicker_month_navigated', {
+        direction: 'previous'
+      });
+    }
+    if (this.posthogLogService) {
+      this.posthogLogService.info('datepicker month navigated', {
+        direction: 'previous'
+      });
+    }
   }
 
   setDate(i: number): void {
@@ -170,6 +196,14 @@ export class NgDatepickerComponent implements ControlValueAccessor, OnInit, OnCh
     this.value = this.date;
     this.init();
     this.close();
+    if (this.posthogService) {
+      this.posthogService.posthog.capture('datepicker_date_selected');
+    }
+    if (this.posthogLogService) {
+      this.posthogLogService.info('datepicker date selected', {
+        selection_source: 'calendar'
+      });
+    }
   }
 
   setYear(i: number): void {
