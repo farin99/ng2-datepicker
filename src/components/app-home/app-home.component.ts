@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import {DatepickerOptions} from '../../ng-datepicker/ng-datepicker.component';
+import { PostHogService } from '../../app/services/posthog.service';
 import * as enLocale from 'date-fns/locale/en';
 import * as frLocale from 'date-fns/locale/fr';
 
@@ -12,7 +13,11 @@ export class AppHomeComponent {
   options: DatepickerOptions = {
     locale: enLocale
   };
-  constructor() {
+  constructor(private posthogService: PostHogService) {
     this.date = new Date();
+  }
+
+  onDateSelected(): void {
+    this.posthogService.capture('date_selected');
   }
 }

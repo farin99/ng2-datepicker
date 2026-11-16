@@ -1,4 +1,5 @@
 const { resolve } = require('path');
+const { readFileSync } = require('fs');
 const AoTPlugin = require('@ngtools/webpack').AotPlugin;
 const webpack = require('webpack');
 const webpackMerge = require('webpack-merge');
@@ -13,6 +14,10 @@ const entryPoints = ["inline", "polyfills", "sw-register", "styles", "vendor", "
 
 module.exports = function (options, webpackOptions) {
   options = options || {};
+
+  const environment = loadEnvironment();
+  const posthogProjectToken = process.env.NG_APP_POSTHOG_PROJECT_TOKEN || environment.NG_APP_POSTHOG_PROJECT_TOKEN || '';
+  const posthogHost = process.env.NG_APP_POSTHOG_HOST || environment.NG_APP_POSTHOG_HOST || '';
 
   let config = {};
 
@@ -37,6 +42,11 @@ module.exports = function (options, webpackOptions) {
       ]
     },
     plugins: [
+      new webpack.DefinePlugin({
+        'process.env.NODE_ENV': JSON.stringify(webpackOptions.p ? 'production' : 'development'),
+        'process.env.NG_APP_POSTHOG_PROJECT_TOKEN': JSON.stringify(posthogProjectToken),
+        'process.env.NG_APP_POSTHOG_HOST': JSON.stringify(posthogHost)
+      }),
       new copy([{ context: './src/assets/public', from: '**/*' }])
     ]
   });
@@ -141,6 +151,20 @@ module.exports = function (options, webpackOptions) {
 
 function root(path) {
   return resolve(__dirname, path);
+}
+
+function loadEnvironment() {
+  try {
+    return readFileSync(root('.env'), 'utf8').split(/\r?\n/).reduce((environment, line) => {
+      const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+      if (match) {
+        environment[match[1]] = match[2];
+      }
+      return environment;
+    }, {});
+  } catch (error) {
+    return {};
+  }
 }
 
 function getEntry(options) {
